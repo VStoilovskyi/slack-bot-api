@@ -7,6 +7,8 @@ var extend = require('extend');
 var WebSocket = require('ws');
 var EventEmitter = require('events').EventEmitter;
 var { setWsHeartbeat } = require('ws-heartbeat/client');
+const { WebClient } = require('@slack/web-api');
+
 
 class Bot extends EventEmitter {
     /**
@@ -19,6 +21,7 @@ class Bot extends EventEmitter {
          this.token = params.token;
          this.name = params.name;
          this.disconnect = params.disconnect;
+         this.webClient = new WebClient(this.token);
 
          console.assert(params.token, 'token must be defined');
          if (!this.disconnect) {
@@ -81,15 +84,22 @@ class Bot extends EventEmitter {
 
     /**
      * Get users
-     * @returns {vow.Promise}
+     * @returns {Vow.Promise}
      */
-     getUsers() {
-          if (this.users) {
-              return Vow.fulfill({ members: this.users });
-          }
+    getUsers() {
+        if (this.users) {
+            return Vow.fulfill({members: this.users});
+        }
+        return this.webClient.paginate('users.list', {},
+            // The third is a function that receives each page and should return true when the next page isn't needed.
+            (page) => false,
+            // The fourth is a reducer function, similar to the callback parameter of Array.prototype.reduce().
+            (accumulator, page, index) => {
 
-          return this._api('users.list');
-     }
+                return accumulator ? accumulator.concat(page.members) : page.members;
+            }
+        );
+    }
 
     /**
      * Get groups
