@@ -86,11 +86,11 @@ class Bot extends EventEmitter {
      * Get users
      * @returns {Vow.Promise}
      */
-    async getUsers() {
+    getUsers() {
         if (this.users) {
             return Vow.fulfill({members: this.users});
         }
-        const users = await this.webClient.paginate('users.list', {},
+        const users = this.webClient.paginate('users.list', {},
             // The third is a function that receives each page and should return true when the next page isn't needed.
             (page) => false,
             // The fourth is a reducer function, similar to the callback parameter of Array.prototype.reduce().
@@ -100,7 +100,9 @@ class Bot extends EventEmitter {
             }
         );
 
-        return { members: users };
+        return new Vow.Promise((resolve, reject) => {
+            users.then(data => resolve({members: data})).catch(e => reject(e));
+        });
     }
 
     /**
